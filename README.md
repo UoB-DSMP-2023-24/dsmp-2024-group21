@@ -1,9 +1,10 @@
 # Group Repository for the Data Science Mini-Project (EMATM0050)
 
 ## Please edit the fields below with your information
-Group Number: 
+Group Number: 21
 
-Problem Assigned: 
+Problem Assigned: JP Morgan（Problem B）
 
-Group Members:
+
+Group Members: SHUOQI    ZHANG, ASAD    HUSSAIN, HAOLIN    LI, THANMAI    GAVINI
 
