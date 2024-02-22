@@ -1,0 +1,47 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import data_processing
+
+
+# Directory path
+LOBs_directory_path = './test/data/LOBs'
+Tapes_directory_path = './test/data/Tapes'
+
+# Load LOBs data
+lobs_df = data_processing.load_LOBs_data(LOBs_directory_path)
+
+# Load Tapes data 
+tapes_df = data_processing.load_Tapes_data(Tapes_directory_path)
+
+# Plotting Order Book
+plt.figure(figsize=(14, 7))
+plt.bar(lobs_df ['bid']['price'], lobs_df['bid']['quantity'], width=0.01, color='green')
+plt.bar(lobs_df['ask']['price'], lobs_df['ask']['quantity'], width=0.01, color='red')
+plt.xlabel('Price')
+plt.ylabel('Quantity')
+plt.title('Order Book')
+plt.show()
+
+# Plotting Price Chart
+plt.figure(figsize=(14, 7))
+plt.plot(tapes_df['timestamp'], tapes_df['price'])
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.title('Price Chart')
+plt.show()
+
+# Plotting Trade History (Table)
+# This is a simple text-based table in Matplotlib, for a GUI-based approach, you might need additional libraries
+from pandas.plotting import table
+
+fig, ax = plt.subplots(figsize=(14, 2))
+# Hide axes
+ax.xaxis.set_visible(False) 
+ax.yaxis.set_visible(False)
+ax.set_frame_on(False)
+# Assuming 'tapes_df' has 'timestamp', 'price', and 'quantity' for trades
+tab = table(ax, tapes_df, loc='upper center', colWidths=[0.2]*len(tapes_df.columns))
+tab.auto_set_font_size(False)
+tab.set_fontsize(8)
+tab.scale(1.2, 1.2)
+plt.show()
