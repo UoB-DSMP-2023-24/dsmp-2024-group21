@@ -5,6 +5,7 @@ import re
 import h5py
 import numpy as np
 from datetime import datetime
+
 import config
 
 def parse_orders(orders_str,timestamp):
@@ -124,23 +125,21 @@ def load_LOBs_data_by_date(hdf5_path, date):
 
         if 'bids' in date_group:
             bids_data = date_group['bids'][:]
-            bids_dfs.append(pd.DataFrame(bids_data, columns=['Timestamp', 'Price', 'Quantity']))
-
+            bids_dfs.append(pd.DataFrame(bids_data, columns=['timestamp', 'price', 'quantity']))
         if 'asks' in date_group:
             asks_data = date_group['asks'][:]
-            asks_dfs.append(pd.DataFrame(asks_data, columns=['Timestamp', 'Price', 'Quantity']))
-
+            asks_dfs.append(pd.DataFrame(asks_data, columns=['timestamp', 'price', 'quantity']))
         if bids_dfs:
             bids_df = pd.concat(bids_dfs)
             bids_df['Type'] = 'Bid'
         else:
-            bids_df = pd.DataFrame(columns=['Timestamp', 'Price', 'Quantity', 'Type'])
+            bids_df = pd.DataFrame(columns=['timestamp', 'price', 'quantity', 'type'])
 
         if asks_dfs:
             asks_df = pd.concat(asks_dfs)
             asks_df['Type'] = 'Ask'
         else:
-            asks_df = pd.DataFrame(columns=['Timestamp', 'Price', 'Quantity', 'Type'])
+            asks_df = pd.DataFrame(columns=['timestamp', 'price', 'quantity', 'type'])
 
         lob_df = pd.concat([bids_df, asks_df])
 
@@ -158,18 +157,28 @@ def load_Tapes_data_by_date(hdf5_path, date):
    
         if date in date_group:
             tapes_data = date_group[date][:]
-            tapes_df=pd.DataFrame(tapes_data, columns=['Timestamp', 'Price', 'Quantity'])
+            tapes_df=pd.DataFrame(tapes_data, columns=['timestamp', 'price', 'quantity'])
         return tapes_df
 
 
 if __name__=='__main__':
     print('1')
+    # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
+    preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
+    # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-30') 
+    tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-06-30') 
+        
     preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
     preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
-    lob_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
-    tapes_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
-        
-    print(lob_df.describe())
-    print(lob_df.head())
+    lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
+    tapes_test_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
+            
+    # print(lob_df.describe())
+    # print(lob_df.head())
     print(tapes_df.describe())
     print(tapes_df.head())
+    
+    # print(lob_test_df.describe())
+    # print(lob_test_df.head())
+    # print(tapes_test_df.describe())
+    # print(tapes_test_df.head())
