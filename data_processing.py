@@ -163,20 +163,20 @@ def load_Tapes_data_by_date(hdf5_path, date):
 
 if __name__=='__main__':
     print('1')
-    # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
-    preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
-    # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-30') 
-    tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-06-30') 
+    preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
+    # preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
+    lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-30') 
+    # tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-06-30') 
         
-    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
-    preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
-    lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
-    tapes_test_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
+    # preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
+    # preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
+    # lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
+    # tapes_test_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
             
-    # print(lob_df.describe())
-    # print(lob_df.head())
-    print(tapes_df.describe())
-    print(tapes_df.head())
+    print(lob_df.describe())
+    print(lob_df.head())
+    # print(tapes_df.describe())
+    # print(tapes_df.head())
     
     # print(lob_test_df.describe())
     # print(lob_test_df.head())
