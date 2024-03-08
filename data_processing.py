@@ -6,6 +6,8 @@ import h5py
 import numpy as np
 from datetime import datetime
 import config
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf,plot_pacf
 
 def parse_orders(orders_str,timestamp):
     try:
@@ -161,11 +163,43 @@ def load_Tapes_data_by_date(hdf5_path, date):
             tapes_df=pd.DataFrame(tapes_data, columns=['Timestamp', 'Price', 'Quantity'])
         return tapes_df
 
+def plot_time_series(df, column_name):
+    ts = df[column_name]
+
+    # 原始时间序列图
+    plt.figure(figsize=(10, 6))
+    plt.plot(ts)
+    plt.title('Price Time Series')
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.show()
+
+    # 一阶差分
+    ts_diff1 = ts.diff(periods=1)
+    plt.figure(figsize=(12, 6))
+    plt.plot(ts_diff1, label='1st Order Differencing')
+    plt.title('1st Order Differencing')
+    plt.legend(loc='best')
+    plt.show()
+
+    # 二阶差分
+    ts_diff2 = ts_diff1.diff(periods=1)
+    plt.figure(figsize=(12, 6))
+    plt.plot(ts_diff2, label='2nd Order Differencing')
+    plt.title('2nd Order Differencing')
+    plt.legend(loc='best')
+    plt.show()
+
+    # 自相关和偏自相关图
+    fig, ax = plt.subplots(2, 1, figsize=(22, 20))
+    plot_acf(ts, ax=ax[0])
+    plot_pacf(ts, ax=ax[1])
+    plt.show()
 
 if __name__=='__main__':
     print('1')
-    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
-    preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
+    #preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
+    #preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
     lob_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
     tapes_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
         
@@ -173,3 +207,4 @@ if __name__=='__main__':
     print(lob_df.head())
     print(tapes_df.describe())
     print(tapes_df.head())
+    plot_time_series(lob_df,'Price')
