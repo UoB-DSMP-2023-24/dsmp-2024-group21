@@ -6,6 +6,8 @@ import h5py
 import numpy as np
 from datetime import datetime
 import config
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf,plot_pacf
 
 def parse_orders(orders_str,timestamp):
     try:
@@ -161,15 +163,25 @@ def load_Tapes_data_by_date(hdf5_path, date):
             tapes_df=pd.DataFrame(tapes_data, columns=['Timestamp', 'Price', 'Quantity'])
         return tapes_df
 
+import ARIMA
+
+
+
+
 
 if __name__=='__main__':
     print('1')
-    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
-    preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
-    lob_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
-    tapes_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
-        
-    print(lob_df.describe())
-    print(lob_df.head())
-    print(tapes_df.describe())
-    print(tapes_df.head())
+    #preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
+    #preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
+    lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02') 
+    tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-01-02') 
+    print(tapes_df.head(10000000))
+    price_series = ARIMA.prepare_series(tapes_df, 'Timestamp', 'Price')
+    train_series, test_series = ARIMA.split_data(price_series)
+    model_fit = ARIMA.train_arima(train_series, (2, 0, 2))
+    forecast_values = ARIMA.forecast(model_fit, len(test_series))
+    #print(forecast_values)
+    ARIMA.plot_forecast(test_series, forecast_values)
+    #mse = calculate_mse(test_series, forecast_values)
+    #print(f'Mean Squared Error: {mse}')
+    #LSTM.process_and_predict(tapes_df)
