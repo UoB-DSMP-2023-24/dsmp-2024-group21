@@ -45,7 +45,6 @@ def simulate_trades(lob_df):
 
 
 if __name__=='__main__':
-    data_processing.preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
     lob_df=data_processing.load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02')
     trades_df = simulate_trades(lob_df)
     print(trades_df)

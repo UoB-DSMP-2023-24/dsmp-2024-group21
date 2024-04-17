@@ -180,14 +180,14 @@ def list_datasets(hdf5_file):
 
 if __name__=='__main__':
     print('1')
-    preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
+    # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
     # preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
-    lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02') 
+    # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02') 
     # tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-06-30') 
         
-    # preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
+    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
     # preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
-    # lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
+    lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
     # tapes_test_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
             
     # print(lob_df.describe())
