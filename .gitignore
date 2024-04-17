@@ -3,3 +3,4 @@ test/data
 *.h5
 .DS_Store
 Data
+__pycache__
