@@ -5,7 +5,7 @@ import re
 import h5py
 import numpy as np
 from datetime import datetime
-
+from tools import getDates
 import config
 
 def parse_orders(orders_str,timestamp):
@@ -62,6 +62,20 @@ def preprocess_Tapes_data(directory_path,hdf5_path):
                 with open(processed_files_path, 'a') as pf:
                         pf.write(filename + '\n')
 
+def preprocess_all_Tapes_data(tapes_hdf5_path):
+    dates=getDates(config.Tapes_directory_path)
+    tapes_df=[]
+    for date in dates:
+        tapes_date_df = load_Tapes_data_by_date(tapes_hdf5_path,date)
+        if tapes_date_df is not None:
+            tapes_date_df['timestamp'] = pd.to_datetime(date) + pd.to_timedelta(tapes_date_df['timestamp'], unit='s')
+            tapes_df.append(tapes_date_df)
+            tapes_date_df.to_hdf(config.AllTapes_hdf5_path, key='all_tapes', mode='a', format='table', data_columns=True, append=True)
+            print(f"Data for {date} appended to {config.AllTapes_hdf5_path}")
+        else:
+            print(f"No data available for {date}")
+        print(tapes_df)
+    return
 
 def load_LOBs_data_by_date(hdf5_path, date):
     with h5py.File(hdf5_path, 'r') as hdf_file:
@@ -175,19 +189,23 @@ def list_datasets(hdf5_file):
     hdf5_file.visititems(visitor_func)
     return datasets
 
-
-
+def load_all_Tapes(hdf5_path):
+    tapes_df=pd.read_hdf(hdf5_path, 'all_tapes')
+    return tapes_df
 
 if __name__=='__main__':
     print('1')
+    
+    # preprocess_all_Tapes_data(config.Tapes_hdf5_path)
+    allTapes=load_all_Tapes(config.AllTapes_hdf5_path)
     # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
     # preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
     # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02') 
     # tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-06-30') 
         
-    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
+    # preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBs_test_hdf5_path)
     # preprocess_Tapes_data(config.Tapes_test_directory_path,config.Tapes_test_hdf5_path)   
-    lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
+    # lob_test_df=load_LOBs_data_by_date(config.LOBs_test_hdf5_path,'2025-01-02') 
     # tapes_test_df=load_Tapes_data_by_date(config.Tapes_test_hdf5_path,'2025-01-02') 
             
     # print(lob_df.describe())
@@ -199,12 +217,12 @@ if __name__=='__main__':
     # print(lob_test_df.head())
     # print(tapes_test_df.describe())
     # print(tapes_test_df.head())
-    with h5py.File(config.LOBs_hdf5_path, 'r') as file:
-        datasets = list_datasets(file)
-        print("Datasets in the HDF5 file:")
-        for dataset in datasets:
-            print(dataset)
+    # with h5py.File(config.LOBs_hdf5_path, 'r') as file:
+    #     datasets = list_datasets(file)
+    #     print("Datasets in the HDF5 file:")
+    #     for dataset in datasets:
+    #         print(dataset)
 
-        print(f"Total number of datasets: {len(datasets)}")
+    #     print(f"Total number of datasets: {len(datasets)}")
 
 
