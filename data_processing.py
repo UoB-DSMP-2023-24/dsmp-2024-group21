@@ -7,14 +7,11 @@ import numpy as np
 from datetime import datetime
 from tools import getDates
 import config
-
-def parse_orders(orders_str,timestamp):
+def parse_orders(orders_str):
     try:
         orders = ast.literal_eval(orders_str)
-        bids = [(float(timestamp),float(price), float(quantity))
-                for price, quantity in orders[0][1]] if orders[0][1] else np.empty((0, 3), dtype='f')
-        asks = [(float(timestamp),float(price), float(quantity))
-                for price, quantity in orders[1][1]] if orders[1][1] else np.empty((0, 3), dtype='f')
+        bids = [('Bid', float(price), float(quantity)) for price, quantity in orders[0][1]] if orders[0][1] else []
+        asks = [('Ask', float(price), float(quantity)) for price, quantity in orders[1][1]] if orders[1][1] else []
         return bids, asks
     except ValueError as e:
         print(f"Error parsing orders: {e}")
@@ -28,11 +25,22 @@ def preprocess_line(line):
     return line
 
 def append_to_dataset(dataset, data_to_append):
+    dtype = np.dtype([
+        ('timestamp', 'f'),  # Use 'f8' for double precision
+        ('type', 'U3'),       # String type with max 3 characters
+        ('price', 'f'),
+        ('quantity', 'f')
+    ])
+
+    # Convert the list of tuples to a structured array
+    structured_array = np.array(data_to_append, dtype=dtype)
+
+    # Debug print to check shape issues
+    print("Structured array shape:", structured_array.shape)
     current_size = dataset.shape[0]
-    additional_size = data_to_append.shape[0]
+    additional_size = structured_array.shape[0]
     dataset.resize(current_size + additional_size, axis=0)
     dataset[current_size:] = data_to_append
-
 
 def preprocess_Tapes_data(directory_path,hdf5_path):
     # Use regex to select filename pattern and identify the date
@@ -76,41 +84,7 @@ def preprocess_all_Tapes_data(tapes_hdf5_path):
             print(f"No data available for {date}")
         print(tapes_df)
     return
-
-def load_LOBs_data_by_date(hdf5_path, date):
-    with h5py.File(hdf5_path, 'r') as hdf_file:
-        date_group = hdf_file.get(date)
-        if date_group is None:
-            print(f"No data for date: {date}")
-            return None
-
-        bids_dfs = []
-        asks_dfs = []
-
-        if 'bids' in date_group:
-            bids_data = date_group['bids'][:]
-            bids_dfs.append(pd.DataFrame(bids_data, columns=['timestamp', 'price', 'quantity']))
-        if 'asks' in date_group:
-            asks_data = date_group['asks'][:]
-            asks_dfs.append(pd.DataFrame(asks_data, columns=['timestamp', 'price', 'quantity']))
-        if bids_dfs:
-            bids_df = pd.concat(bids_dfs)
-            bids_df['Type'] = 'Bid'
-        else:
-            bids_df = pd.DataFrame(columns=['timestamp', 'price', 'quantity', 'type'])
-
-        if asks_dfs:
-            asks_df = pd.concat(asks_dfs)
-            asks_df['Type'] = 'Ask'
-        else:
-            asks_df = pd.DataFrame(columns=['timestamp', 'price', 'quantity', 'type'])
-
-        lob_df = pd.concat([bids_df, asks_df])
-
-        # reset index
-        lob_df.reset_index(drop=True, inplace=True)
-
-        return lob_df
+      
 
 def preprocess_LOBs_data(directory_path, hdf5_path, batch_size=100000):
     file_pattern = re.compile(r'^UoB_Set01_(\d{4}-\d{2}-\d{2})LOBs\.txt$')
@@ -137,36 +111,45 @@ def preprocess_LOBs_data(directory_path, hdf5_path, batch_size=100000):
                 print(f"Error processing {filename}: {e}")
 
 def process_single_file(match, filename, directory_path, hdf5_path, batch_size):
-    date_str = match.group(1)
+    date_str = 'date_' + match.group(1).replace('-', '')
     file_path = os.path.join(directory_path, filename)
-    
-    with h5py.File(hdf5_path, 'a') as hdf_file:
-        date_group = hdf_file.require_group(date_str)
-        for dataset_name in ["bids", "asks"]:
-            if dataset_name not in date_group:
-                date_group.create_dataset(dataset_name, shape=(0, 3), maxshape=(None, 3), dtype='f', chunks=True, compression="gzip")
+        # dataset=hdf_file.create_dataset(date_str, shape=(0, 4), maxshape=(None, 4), dtype='f', chunks=True, compression="gzip")
+    item=[]
+    with open(file_path, 'r') as file:
+        for line in file:
+            data_list = ast.literal_eval(preprocess_line(line.strip()))
+            timestamp, exchange, orders = data_list
+            bids, asks = parse_orders(str(orders))
+            for bid in bids:
+                item.append((float(timestamp), 'Bid', float(bid[1]), float(bid[2])))
+            for ask in asks: 
+                item.append((float(timestamp), 'Ask', float(ask[1]), float(ask[2])))
+        lob_df=pd.DataFrame(item,columns=['timestamp','type','price','quantity'])
+        lob_df.to_hdf(hdf5_path, key=date_str, mode='a')
+        
+        
+import pandas as pd
+import h5py
+
+def load_LOBs_data_by_date(hdf5_path, date):
+    # Format the date string to match the key used when saving the data
+    date_str = 'date_' + date.replace('-', '')
+
+    try:
+        # Attempt to load the DataFrame from the specified key
+        lob_df = pd.read_hdf(hdf5_path, key=date_str)
+        print(f"Load data for {date_str}.")
+        
+        return lob_df
+    except KeyError:
+        # Handle cases where the key does not exist
+        print(f"No data found for {date_str}.")
+        return None
+    except Exception as e:
+        # Handle other potential errors
+        print(f"An error occurred while loading the data: {e}")
+        return None
                 
-        all_bids, all_asks = [], []
-        with open(file_path, 'r') as file:
-            for line in file:
-                data_list = ast.literal_eval(preprocess_line(line.strip()))
-                timestamp, exchange, orders = data_list
-                bids, asks = parse_orders(str(orders), timestamp)
-                all_bids.extend(bids)
-                all_asks.extend(asks)
-
-                if len(all_bids) >= batch_size:
-                    append_to_dataset(date_group['bids'], np.array(all_bids, dtype='f'))
-                    all_bids = []  
-                if len(all_asks) >= batch_size:
-                    append_to_dataset(date_group['asks'], np.array(all_asks, dtype='f'))
-                    all_asks = []
-
-            if all_bids:
-                append_to_dataset(date_group['bids'], np.array(all_bids, dtype='f'))
-            if all_asks:
-                append_to_dataset(date_group['asks'], np.array(all_asks, dtype='f'))
-    
 def load_Tapes_data_by_date(hdf5_path, date):
     with h5py.File(hdf5_path, 'r') as hdf_file:
         date_group = hdf_file.get(date)
@@ -193,11 +176,46 @@ def load_all_Tapes(hdf5_path):
     tapes_df=pd.read_hdf(hdf5_path, 'all_tapes')
     return tapes_df
 
+
+def process_spread(directory_path,saving_hdf5_path):
+    file_pattern = re.compile(r'^UoB_Set01_(\d{4}-\d{2}-\d{2})LOBs\.txt$')
+    for filename in os.listdir(directory_path):
+        match = file_pattern.match(filename)
+        date_str = match.group(1)
+        file_path = os.path.join(directory_path, filename)
+        spread=pd.DataFrame(columns=['timestamp','ask','bid','spread'])
+        with h5py.File(saving_hdf5_path, 'a') as hdf_file:
+            date_group = hdf_file.require_group(date_str)
+            date_group.create_dataset('spread', shape=(0, 3), maxshape=(None, 3), dtype='f', chunks=True, compression="gzip")   
+            all_bids, all_asks = [], []
+            with open(file_path, 'r') as file:
+                for line in file:
+                    data_list = ast.literal_eval(preprocess_line(line.strip()))
+                    timestamp, exchange, orders = data_list
+                    bids, asks = parse_orders(str(orders), timestamp)
+                    all_bids.extend(bids)
+                    all_asks.extend(asks)
+
+                    if len(all_bids) >= batch_size:
+                        append_to_dataset(date_group['bids'], np.array(all_bids, dtype='f'))
+                        all_bids = []  
+                    if len(all_asks) >= batch_size:
+                        append_to_dataset(date_group['asks'], np.array(all_asks, dtype='f'))
+                        all_asks = []
+
+def test_LOB():
+    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBsT_hdf5_path)
+    lob_df=load_LOBs_data_by_date(config.LOBsT_hdf5_path,'2025-01-02') 
+    print(lob_df.head())
+    # print(lob_df.describe())
+    
+                                      
 if __name__=='__main__':
     print('1')
     
+    test_LOB()
+    
     # preprocess_all_Tapes_data(config.Tapes_hdf5_path)
-    allTapes=load_all_Tapes(config.AllTapes_hdf5_path)
     # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
     # preprocess_Tapes_data(config.Tapes_directory_path,config.Tapes_hdf5_path)   
     # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02') 
@@ -217,7 +235,7 @@ if __name__=='__main__':
     # print(lob_test_df.head())
     # print(tapes_test_df.describe())
     # print(tapes_test_df.head())
-    # with h5py.File(config.LOBs_hdf5_path, 'r') as file:
+    # with h5py.File(config.LOBsT_hdf5_path, 'r') as file:
     #     datasets = list_datasets(file)
     #     print("Datasets in the HDF5 file:")
     #     for dataset in datasets:
