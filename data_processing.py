@@ -4,7 +4,7 @@ import os
 import re
 import h5py
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from tools import getDates
 import config
 def parse_orders(orders_str):
@@ -76,7 +76,7 @@ def preprocess_all_Tapes_data(tapes_hdf5_path):
     for date in dates:
         tapes_date_df = load_Tapes_data_by_date(tapes_hdf5_path,date)
         if tapes_date_df is not None:
-            tapes_date_df['timestamp'] = pd.to_datetime(date) + pd.to_timedelta(tapes_date_df['timestamp'], unit='s')
+            tapes_date_df.reset_index(drop=True, inplace=True)
             tapes_df.append(tapes_date_df)
             tapes_date_df.to_hdf(config.AllTapes_hdf5_path, key='all_tapes', mode='a', format='table', data_columns=True, append=True)
             print(f"Data for {date} appended to {config.AllTapes_hdf5_path}")
@@ -128,9 +128,6 @@ def process_single_file(match, filename, directory_path, hdf5_path, batch_size):
         lob_df.to_hdf(hdf5_path, key=date_str, mode='a')
         
         
-import pandas as pd
-import h5py
-
 def load_LOBs_data_by_date(hdf5_path, date):
     # Format the date string to match the key used when saving the data
     date_str = 'date_' + date.replace('-', '')
@@ -138,9 +135,34 @@ def load_LOBs_data_by_date(hdf5_path, date):
     try:
         # Attempt to load the DataFrame from the specified key
         lob_df = pd.read_hdf(hdf5_path, key=date_str)
-        print(f"Load data for {date_str}.")
+        lob_df['timestamp'] = pd.to_timedelta(lob_df['timestamp'], unit='s')
+        date_datetime = pd.to_datetime(date)
+        lob_df['timestamp'] = date_datetime + lob_df['timestamp']
+        # lob_df['timestamp'] = lob_df['timestamp'].apply(lambda x: str(timedelta(seconds=int(x))))
+        # lob_df['timestamp'] = pd.to_datetime(date + ' ' + lob_df['timestamp'])
+
+        lob_df.set_index('timestamp', inplace=True)
+        lob_df['rounded_second'] = lob_df.index.ceil('S')
+        lob_df.reset_index(inplace=True)
         
-        return lob_df
+        resampled_dfs = []
+        
+        for type_label in ['Ask', 'Bid']:
+            type_df = lob_df[lob_df['type'] == type_label]
+
+            type_df['max_timestamp'] = type_df.groupby('rounded_second')['timestamp'].transform('max')
+            filtered_df = type_df[type_df['timestamp'] == type_df['max_timestamp']]
+            
+            resampled_dfs.append(filtered_df)
+        
+        final_df = pd.concat(resampled_dfs)
+        final_df.reset_index(inplace=True)  
+        # final_df=lob_df
+        print(f"Loaded and resampled data for {date_str}.")
+        return final_df
+        
+        
+        
     except KeyError:
         # Handle cases where the key does not exist
         print(f"No data found for {date_str}.")
@@ -149,18 +171,28 @@ def load_LOBs_data_by_date(hdf5_path, date):
         # Handle other potential errors
         print(f"An error occurred while loading the data: {e}")
         return None
-                
+
 def load_Tapes_data_by_date(hdf5_path, date):
     with h5py.File(hdf5_path, 'r') as hdf_file:
         date_group = hdf_file.get(date)
         if date_group is None:
             print(f"No data for date: {date}")
             return None
-   
+
         if date in date_group:
             tapes_data = date_group[date][:]
-            tapes_df=pd.DataFrame(tapes_data, columns=['timestamp', 'price', 'quantity'])
+            tapes_df = pd.DataFrame(tapes_data, columns=['timestamp', 'price', 'quantity'])
+            
+            tapes_df['timestamp'] = tapes_df['timestamp'].apply(lambda x: str(timedelta(seconds=int(x))))
+            
+            tapes_df['timestamp'] = pd.to_datetime(date + ' ' + tapes_df['timestamp'])
+            
+            tapes_df.set_index('timestamp', inplace=True)
+            
+            tapes_df = tapes_df.resample('1T').last().fillna(method='ffill')
+            tapes_df.reset_index(inplace=True)
         return tapes_df
+
 
 def list_datasets(hdf5_file):
     datasets = []
@@ -175,6 +207,20 @@ def list_datasets(hdf5_file):
 def load_all_Tapes(hdf5_path):
     tapes_df=pd.read_hdf(hdf5_path, 'all_tapes')
     return tapes_df
+
+def load_all_LOBs(LOBs_hdf5_path):
+    dates = getDates(config.LOBs_directory_path)
+    for date in dates:
+        lob_date_df = load_LOBs_data_by_date(LOBs_hdf5_path, date)
+        if lob_date_df is not None:
+            lob_date_df.reset_index(drop=True, inplace=True)
+            lob_date_df.to_hdf(config.AllLOBs_hdf5_path, key='all_LOBs', mode='a', format='table',append=True)
+            print(f"Data for {date} appended to lob_df")
+        else:
+            print(f"No data available for {date}")
+    # lob_df.to_hdf(config.AllLOBs_hdf5_path, key='all_LOBs', mode='a', format='table')
+    lob_df=pd.read_hdf(config.AllLOBs_hdf5_path,'all_LOBs')
+    return lob_df
 
 
 def process_spread(directory_path,saving_hdf5_path):
@@ -204,16 +250,25 @@ def process_spread(directory_path,saving_hdf5_path):
                         all_asks = []
 
 def test_LOB():
-    preprocess_LOBs_data(config.LOBs_test_directory_path,config.LOBsT_hdf5_path)
-    lob_df=load_LOBs_data_by_date(config.LOBsT_hdf5_path,'2025-01-02') 
+    # preprocess_LOBs_data(config.LOBs_hdf5_path)
+    # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02')
+    lob_df=pd.read_hdf(config.AllLOBs_hdf5_path,'all_LOBs')
+    # lob_df=load_all_LOBs(config.LOBs_hdf5_path)
     print(lob_df.head())
-    # print(lob_df.describe())
-    
+    print(lob_df.tail())
+    print(lob_df.describe())
+
+def test_tapes():
+    tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-01-02')
+    print(tapes_df.head())
+    print(tapes_df.describe())
                                       
 if __name__=='__main__':
     print('1')
-    
-    test_LOB()
+    # test_LOB()
+    # test_tapes()
+    df=load_all_Tapes(config.AllTapes_hdf5_path)
+    print(df.describe)
     
     # preprocess_all_Tapes_data(config.Tapes_hdf5_path)
     # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)

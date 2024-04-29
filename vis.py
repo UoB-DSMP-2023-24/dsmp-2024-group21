@@ -1,4 +1,5 @@
 
+from datetime import timedelta
 from pyecharts import options as opts
 from pyecharts.charts import Line,Timeline
 from pyecharts.commons.utils import JsCode
@@ -85,15 +86,14 @@ def lob_depth_chart(asks_df,bids_df,tapes_data):
     # line.render("lob_depth_chart.html")
     return line
 
-                
-if __name__=='__main__':
-    
-    lob_df=load_LOBs_data_by_date(config.LOBsT_hdf5_path,'2025-01-03')
-    tapes_df=load_Tapes_data_by_date(config.Tapes_hdf5_path,'2025-01-03')
+
+def depthchart(lob_hdf5,tapes_hdf5,date):
+    lob_df=load_LOBs_data_by_date(lob_hdf5,date)
+    tapes_df=load_Tapes_data_by_date(tapes_hdf5,date)
     timestamps = lob_df['timestamp'].unique()
-    tapes_timestamps=tapes_df['timestamp'].unique()
-    print(timestamps)
-    print(tapes_timestamps)
+    last_valid_tape_price = 0 
+    stop_time = pd.to_datetime(date) + timedelta(minutes=30)
+    print(f'Stop time is {stop_time}')
     timeline = Timeline()
     for ts in timestamps:
         df_update = lob_df[lob_df['timestamp'] == ts]
@@ -102,22 +102,24 @@ if __name__=='__main__':
         print(f'_____ {ts}_______')
         print(new_asks)
         print(new_bids)
-        filtered_tapes = tapes_df[tapes_df['timestamp'] < ts]
-        if not filtered_tapes.empty:
-            idx = filtered_tapes['timestamp'].idxmax()
-            maxtape = tapes_df.loc[idx, ['timestamp', 'price']]  
-        else:
-            maxtape = pd.DataFrame({'timestamp': [0], 'price': [0]})
-        print(f'maxtape is {maxtape}')
         
-        depthchart=lob_depth_chart(new_asks,new_bids,maxtape['price'])
+        if not tapes_df[tapes_df['timestamp'] == ts].empty:
+            tape_price = tapes_df.loc[tapes_df['timestamp'] == ts, 'price'].iloc[0]
+            last_valid_tape_price = tape_price  
+        else:
+            tape_price = last_valid_tape_price          
+        depthchart=lob_depth_chart(new_asks,new_bids,tape_price)
         
         ts_datetime = pd.to_datetime(ts).to_pydatetime()
         timeline.add(depthchart, ts_datetime.strftime("%H:%M:%S"))
-
-        if ts>3000:
+        if ts_datetime >= stop_time:
+            print(f'Stopping at {ts_datetime} as it is past or at the 30 minute mark.')
             break
-    timeline.add_schema(play_interval=100) # Play interval in milliseconds
+
+    timeline.add_schema(play_interval=500) # Play interval in milliseconds
     
     # Render to html file
-    timeline.render("lob_depth_chart_with_timeline.html")
+    timeline.render("lob_depth_chart_with_timeline.html")     
+    
+if __name__=='__main__':
+    depthchart(config.LOBs_hdf5_path,config.Tapes_hdf5_path,'2025-05-20')
