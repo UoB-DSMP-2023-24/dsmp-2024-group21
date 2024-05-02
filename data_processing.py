@@ -189,7 +189,7 @@ def load_Tapes_data_by_date(hdf5_path, date):
             
             tapes_df.set_index('timestamp', inplace=True)
             
-            tapes_df = tapes_df.resample('1T').last().fillna(method='ffill')
+            tapes_df = tapes_df.resample('1s').last().fillna(method='ffill')
             tapes_df.reset_index(inplace=True)
         return tapes_df
 
@@ -250,9 +250,9 @@ def process_spread(directory_path,saving_hdf5_path):
                         all_asks = []
 
 def test_LOB():
-    # preprocess_LOBs_data(config.LOBs_hdf5_path)
-    # lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-02')
-    lob_df=pd.read_hdf(config.AllLOBs_hdf5_path,'all_LOBs')
+    preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)
+    lob_df=load_LOBs_data_by_date(config.LOBs_hdf5_path,'2025-01-03')
+    # lob_df=pd.read_hdf(config.AllLOBs_hdf5_path,'all_LOBs')
     # lob_df=load_all_LOBs(config.LOBs_hdf5_path)
     print(lob_df.head())
     print(lob_df.tail())
@@ -265,10 +265,10 @@ def test_tapes():
                                       
 if __name__=='__main__':
     print('1')
-    # test_LOB()
+    test_LOB()
     # test_tapes()
-    df=load_all_Tapes(config.AllTapes_hdf5_path)
-    print(df.describe)
+    # df=load_all_Tapes(config.AllTapes_hdf5_path)
+    # print(df.describe)
     
     # preprocess_all_Tapes_data(config.Tapes_hdf5_path)
     # preprocess_LOBs_data(config.LOBs_directory_path,config.LOBs_hdf5_path)

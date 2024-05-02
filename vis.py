@@ -17,7 +17,7 @@ def lob_depth_chart(asks_df,bids_df,tapes_data):
     asks_df_sorted = asks_df.sort_values(by='price', ascending=True)
     bids_df_sorted = bids_df.sort_values(by='price', ascending=False)
 
-    line = Line(init_opts=opts.InitOpts(bg_color='black'))
+    line = Line(init_opts=opts.InitOpts(bg_color='white'))
 
     asks_df_sorted['cumulative'] = asks_df_sorted['quantity'].cumsum()
     bids_df_sorted['cumulative'] = bids_df_sorted['quantity'].cumsum()
@@ -63,7 +63,7 @@ def lob_depth_chart(asks_df,bids_df,tapes_data):
     markline_opts = opts.MarkLineOpts(
         data=[{"xAxis": float(tapes_data)}],  # Assuming tape_data['price'] is correctly aligned with your xaxis
         symbol=['none', 'none'],
-        linestyle_opts=opts.LineStyleOpts(color='rgba(255, 255, 255, 0.5)', width=2)
+        linestyle_opts=opts.LineStyleOpts(color='rgba(0, 0, 0, 0.5)', width=2)
     )
     line.set_series_opts(markline_opts=markline_opts)
 
@@ -99,9 +99,9 @@ def depthchart(lob_hdf5,tapes_hdf5,date):
         df_update = lob_df[lob_df['timestamp'] == ts]
         new_asks=df_update[df_update['type']=='Ask']
         new_bids=df_update[df_update['type']=='Bid']
-        print(f'_____ {ts}_______')
-        print(new_asks)
-        print(new_bids)
+        # print(f'_____ {ts}_______')
+        # print(new_asks)
+        # print(new_bids)
         
         if not tapes_df[tapes_df['timestamp'] == ts].empty:
             tape_price = tapes_df.loc[tapes_df['timestamp'] == ts, 'price'].iloc[0]

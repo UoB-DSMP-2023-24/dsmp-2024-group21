@@ -34,7 +34,6 @@ def plot_data_with_differences(prices, title):
 
 def process_data(date_df, date):
     base_date = datetime.strptime(date, '%Y-%m-%d')
-    date_df['timestamp'] = date_df['timestamp'].apply(lambda x: base_date + timedelta(seconds=x))
     date_df.set_index('timestamp', inplace=True)
     resampled_series = date_df.resample('1S').mean()
     resampled_series.fillna(method='ffill', inplace=True)
@@ -98,6 +97,7 @@ tapes_df=[]
 for date in dates:
     tapes_date_df = load_Tapes_data_by_date(config.Tapes_hdf5_path,date)
     tapes_df.append([tapes_date_df,date])
+    
 
 
 
